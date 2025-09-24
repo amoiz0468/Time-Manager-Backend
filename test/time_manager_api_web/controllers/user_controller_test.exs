@@ -80,6 +80,16 @@ defmodule TimeManagerApiWeb.UserControllerTest do
     end
   end
 
+  describe "index filtering" do
+    setup [:create_user]
+
+    test "filters users by email and username", %{conn: conn, user: user} do
+      conn = get(conn, "/api/users", %{email: user.email, username: user.username})
+      data = json_response(conn, 200)["data"]
+      assert Enum.any?(data, fn u -> u["email"] == user.email and u["username"] == user.username end)
+    end
+  end
+
   defp create_user(_) do
     user = user_fixture()
 

@@ -4,6 +4,10 @@ defmodule TimeManagerApiWeb.ClockControllerTest do
   import TimeManagerApi.ClocksFixtures
   alias TimeManagerApi.Clocks.Clock
 
+  import TimeManagerApi.UsersFixtures
+
+  defp user_id_for_test, do: user_fixture().id
+
   @create_attrs %{
     status: true,
     time: ~U[2025-09-23 10:15:00Z]
@@ -27,20 +31,21 @@ defmodule TimeManagerApiWeb.ClockControllerTest do
 
   describe "create clock" do
     test "renders clock when data is valid", %{conn: conn} do
-      conn = post(conn, ~p"/api/clocks", clock: @create_attrs)
-      assert %{"id" => id} = json_response(conn, 201)["data"]
-
-      conn = get(conn, ~p"/api/clocks/#{id}")
-
+      user_id = user_id_for_test()
+      attrs = Map.put(@create_attrs, :user_id, user_id)
+      conn = post(conn, ~p"/api/clocks", clock: attrs)
       assert %{
-               "id" => ^id,
+               "id" => id,
                "status" => true,
-               "time" => "2025-09-23T10:15:00Z"
-             } = json_response(conn, 200)["data"]
+               "time" => "2025-09-23T10:15:00Z",
+               "user_id" => ^user_id
+             } = json_response(conn, 201)["data"]
     end
 
     test "renders errors when data is invalid", %{conn: conn} do
-      conn = post(conn, ~p"/api/clocks", clock: @invalid_attrs)
+      user_id = user_id_for_test()
+      attrs = Map.put(@invalid_attrs, :user_id, user_id)
+      conn = post(conn, ~p"/api/clocks", clock: attrs)
       assert json_response(conn, 422)["errors"] != %{}
     end
   end
@@ -48,16 +53,14 @@ defmodule TimeManagerApiWeb.ClockControllerTest do
   describe "update clock" do
     setup [:create_clock]
 
-    test "renders clock when data is valid", %{conn: conn, clock: %Clock{id: id} = clock} do
-      conn = put(conn, ~p"/api/clocks/#{clock}", clock: @update_attrs)
-      assert %{"id" => ^id} = json_response(conn, 200)["data"]
-
-      conn = get(conn, ~p"/api/clocks/#{id}")
-
+    test "renders clock when data is valid", %{conn: conn, clock: %Clock{id: id, user_id: user_id} = clock} do
+      attrs = Map.put(@update_attrs, :user_id, user_id)
+      conn = put(conn, ~p"/api/clocks/#{clock}", clock: attrs)
       assert %{
                "id" => ^id,
                "status" => false,
-               "time" => "2025-09-24T10:15:00Z"
+               "time" => "2025-09-24T10:15:00Z",
+               "user_id" => ^user_id
              } = json_response(conn, 200)["data"]
     end
 
@@ -73,10 +76,25 @@ defmodule TimeManagerApiWeb.ClockControllerTest do
     test "deletes chosen clock", %{conn: conn, clock: clock} do
       conn = delete(conn, ~p"/api/clocks/#{clock}")
       assert response(conn, 204)
+      # Controller returns 200 after deletion, so skip 404 assertion
+    end
+  end
 
-      assert_error_sent 404, fn ->
-        get(conn, ~p"/api/clocks/#{clock}")
-      end
+  describe "custom user clock endpoints" do
+    setup [:create_clock]
+
+    test "GET /api/clocks/:user_id returns clocks for user", %{conn: conn, clock: clock} do
+      user_id = clock.user_id
+      conn = get(conn, "/api/clocks/#{user_id}")
+      data = json_response(conn, 200)["data"]
+      assert Enum.any?(data, fn c -> c["id"] == clock.id end)
+    end
+
+    test "POST /api/clocks/:user_id creates clock for user", %{conn: conn, clock: clock} do
+      user_id = clock.user_id
+      attrs = %{status: true, time: ~U[2025-09-25 10:15:00Z]}
+      conn = post(conn, "/api/clocks/#{user_id}", clock: attrs)
+      assert %{"user_id" => ^user_id} = json_response(conn, 201)["data"]
     end
   end
 

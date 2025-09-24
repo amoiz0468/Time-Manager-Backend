@@ -8,11 +8,13 @@ defmodule TimeManagerApi.ClocksFixtures do
   Generate a clock.
   """
   def clock_fixture(attrs \\ %{}) do
+    user = TimeManagerApi.UsersFixtures.user_fixture()
     {:ok, clock} =
       attrs
       |> Enum.into(%{
         status: true,
-        time: ~U[2025-09-23 10:15:00Z]
+        time: ~U[2025-09-23 10:15:00Z],
+        user_id: user.id
       })
       |> TimeManagerApi.Clocks.create_clock()
 

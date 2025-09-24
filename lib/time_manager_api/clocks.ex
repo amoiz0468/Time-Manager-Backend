@@ -1,7 +1,4 @@
 defmodule TimeManagerApi.Clocks do
-  @moduledoc """
-  The Clocks context.
-  """
 
   import Ecto.Query, warn: false
   alias TimeManagerApi.Repo

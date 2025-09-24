@@ -17,8 +17,20 @@ defmodule TimeManagerApi.Users do
       [%User{}, ...]
 
   """
-  def list_users do
-    Repo.all(User)
+  def list_users(params \\ %{}) do
+    query =
+      User
+      |> maybe_filter(:email, params)
+      |> maybe_filter(:username, params)
+    Repo.all(query)
+  end
+
+  defp maybe_filter(query, _field, %{} = params) when map_size(params) == 0, do: query
+  defp maybe_filter(query, field, params) do
+    case Map.get(params, Atom.to_string(field)) do
+      nil -> query
+      value -> from u in query, where: field(u, ^field) == ^value
+    end
   end
 
   @doc """

@@ -21,11 +21,13 @@ defmodule TimeManagerApi.ClocksTest do
     end
 
     test "create_clock/1 with valid data creates a clock" do
-      valid_attrs = %{status: true, time: ~U[2025-09-23 10:15:00Z]}
+      user = TimeManagerApi.UsersFixtures.user_fixture()
+      valid_attrs = %{status: true, time: ~U[2025-09-23 10:15:00Z], user_id: user.id}
 
       assert {:ok, %Clock{} = clock} = Clocks.create_clock(valid_attrs)
       assert clock.status == true
       assert clock.time == ~U[2025-09-23 10:15:00Z]
+      assert clock.user_id == user.id
     end
 
     test "create_clock/1 with invalid data returns error changeset" do

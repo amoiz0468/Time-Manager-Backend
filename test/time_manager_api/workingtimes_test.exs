@@ -21,11 +21,13 @@ defmodule TimeManagerApi.WorkingtimesTest do
     end
 
     test "create_working_time/1 with valid data creates a working_time" do
-      valid_attrs = %{start: ~U[2025-09-23 10:15:00Z], end: ~U[2025-09-23 10:15:00Z]}
+      user = TimeManagerApi.UsersFixtures.user_fixture()
+      valid_attrs = %{start: ~U[2025-09-23 10:15:00Z], end: ~U[2025-09-23 10:15:00Z], user_id: user.id}
 
       assert {:ok, %WorkingTime{} = working_time} = Workingtimes.create_working_time(valid_attrs)
       assert working_time.start == ~U[2025-09-23 10:15:00Z]
       assert working_time.end == ~U[2025-09-23 10:15:00Z]
+      assert working_time.user_id == user.id
     end
 
     test "create_working_time/1 with invalid data returns error changeset" do

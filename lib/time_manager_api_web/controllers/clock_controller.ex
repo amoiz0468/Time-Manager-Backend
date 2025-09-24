@@ -39,6 +39,11 @@ defmodule TimeManagerApiWeb.ClockController do
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/clocks/#{clock}")
       |> render(:show, clock: clock)
+    else
+      _ ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{"errors" => %{detail: "Could not create clock"}})
     end
   end
 
@@ -52,6 +57,11 @@ defmodule TimeManagerApiWeb.ClockController do
 
     with {:ok, %Clock{} = clock} <- Clocks.update_clock(clock, clock_params) do
       render(conn, :show, clock: clock)
+    else
+      _ ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{"errors" => %{detail: "Could not update clock"}})
     end
   end
 

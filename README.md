@@ -26,7 +26,7 @@ The API will be available at [http://localhost:4000/api](http://localhost:4000/a
 ## API Endpoints
 
 ### Users
-- `GET    /api/users?email=XXX&username=YYY` — List users by email and/or username
+- `GET    /api/users` — List users by email and/or username
 - `GET    /api/users/:userID` — Get a user by ID
 - `POST   /api/users` — Create a new user
 - `PUT    /api/users/:userID` — Update a user

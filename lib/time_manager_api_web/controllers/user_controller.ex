@@ -6,8 +6,8 @@ defmodule TimeManagerApiWeb.UserController do
 
   action_fallback TimeManagerApiWeb.FallbackController
 
-  def index(conn, _params) do
-    users = Users.list_users()
+  def index(conn, params) do
+    users = Users.list_users(params)
     render(conn, :index, users: users)
   end
 
