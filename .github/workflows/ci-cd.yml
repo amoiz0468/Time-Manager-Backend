@@ -196,6 +196,13 @@ jobs:
         heroku config:set SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }} --app theme-02-pool-team-5-backend
         # Add other environment variables as needed
 
+    - name: Set Heroku buildpacks
+      run: |
+        heroku buildpacks:clear --app theme-02-pool-team-5-backend
+        heroku buildpacks:set https://github.com/hashnuke/heroku-buildpack-elixir.git --app theme-02-pool-team-5-backend
+        # Only add this if you have frontend assets that need to be compiled
+    # heroku buildpacks:add https://github.com/gjaldon/heroku-buildpack-phoenix-static.git --app theme-02-pool-team-5-backend
+
     - name: Deploy to Heroku
       run: git push heroku HEAD:main --force
 
