@@ -198,6 +198,10 @@ jobs:
 
     - name: Set Heroku buildpacks
       run: |
+        echo "elixir_version=1.16.0" > elixir_buildpack.config
+        echo "erlang_version=26.0" >> elixir_buildpack.config
+        echo "always_rebuild=false" >> elixir_buildpack.config
+        echo "phoenix_ex=phx" >> elixir_buildpack.config    
         heroku buildpacks:clear --app theme-02-pool-team-5-backend
         heroku buildpacks:set https://github.com/hashnuke/heroku-buildpack-elixir.git --app theme-02-pool-team-5-backend
         # Only add this if you have frontend assets that need to be compiled
