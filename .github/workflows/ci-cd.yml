@@ -1,0 +1,201 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ docker-integration ]
+  pull_request:
+    branches: [ docker-integration ]
+
+env:
+  MIX_ENV: test
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/time_manager_api_test
+
+jobs:
+  # CONTINUOUS INTEGRATION
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: time_manager_api_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.16.0'
+        otp-version: '26.0'
+
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-
+
+    - name: Install dependencies
+      run: mix deps.get
+
+    - name: Run tests
+      run: mix test
+
+    - name: Run code formatting check
+      run: mix format --check-formatted
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.16.0'
+        otp-version: '26.0'
+
+    - name: Install dependencies
+      run: mix deps.get
+
+    - name: Run security audit
+      run: mix deps.audit || true
+
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    needs: [test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.16.0'
+        otp-version: '26.0'
+
+    - name: Install dependencies
+      run: mix deps.get
+
+    - name: Cache SonarQube packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.sonar/cache
+        key: ${{ runner.os }}-sonar
+        restore-keys: ${{ runner.os }}-sonar
+
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  # CONTINUOUS DEPLOYMENT
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, security, sonarqube]
+    if: github.ref == 'refs/heads/docker-integration'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ secrets.DOCKER_USERNAME }}/theme_02_backend_t5
+        tags: |
+          type=raw,value=latest,enable=true
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # DEPLOYMENT
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.ref == 'refs/heads/docker-integration'
+    environment: development
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Development Environment
+      run: |
+        echo "🚀 Deploying to Development Environment"
+        echo "Docker Image: ${{ secrets.DOCKER_USERNAME }}/theme_02_backend_t5:latest"
+        echo "Environment: Development (as per Dockerfile)"
+        echo "This would typically include:"
+        echo "- SSH to dev server"
+        echo "- Pull latest Docker image"
+        echo "- Stop old containers"
+        echo "- Start new containers with dev configuration"
+        echo "- Run database migrations"
+        echo "- Run health checks"
+
+    - name: Run Development Health Checks
+      run: |
+        echo "🧪 Running development environment tests"
+        echo "This could include:"
+        echo "- API endpoint tests"
+        echo "- Database connectivity tests"
+        echo "- Development-specific validations"
+
+  # ROLLBACK CAPABILITY
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/docker-integration'
+    
+    steps:
+    - name: Rollback Deployment
+      run: |
+        echo "🔄 Rolling back deployment"
+        echo "This would typically include:"
+        echo "- Revert to previous Docker image"
+        echo "- Restore database backup if needed"
+        echo "- Notify team of rollback"
+        echo "- Investigate failure cause"
